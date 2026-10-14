@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventory Dashboard</title>
+<style>
+  :root {
+    --bg: #f3f5f9; --card: #ffffff; --ink: #1b2430; --muted: #6b7788; --line: #e3e8ef;
+    --brand: #4f46e5; --brand-ink: #ffffff; --danger: #d64545;
+    --budget-bg: #e0f2fe; --budget: #0369a1;
+    --standard-bg: #fef3c7; --standard: #92600a;
+    --premium-bg: #ede9fe; --premium: #6d28d9;
+    --console-bg: #111827; --console-ink: #d1fae5;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 4px 14px rgba(16,24,40,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1320; --card: #161d2e; --ink: #e7ecf5; --muted: #93a0b5; --line: #26304a;
+      --brand: #818cf8; --brand-ink: #0e1320;
+      --budget-bg: #0c3350; --budget: #7dd3fc; --standard-bg: #473510; --standard: #fcd34d;
+      --premium-bg: #2e2257; --premium: #c4b5fd; --console-bg: #0a0f1a;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.5; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 28px 18px 60px; }
+  header { margin-bottom: 22px; }
+  h1 { font-size: 1.7rem; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--muted); }
+  h2 { font-size: 1.05rem; margin: 0 0 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+          padding: 20px; box-shadow: var(--shadow); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 18px; }
+  .stat .label { color: var(--muted); font-size: .85rem; }
+  .stat .value { font-size: 1.7rem; font-weight: 700; margin-top: 2px; }
+  .grid { display: grid; grid-template-columns: 1fr 1.6fr; gap: 18px; align-items: start; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  label { display: block; font-size: .88rem; font-weight: 600; margin-bottom: 5px; }
+  input { width: 100%; font: inherit; padding: 11px 12px; border: 1px solid var(--line); border-radius: 9px;
+          background: var(--bg); color: var(--ink); margin-bottom: 14px; }
+  input:focus { outline: 3px solid color-mix(in srgb, var(--brand) 40%, transparent); border-color: var(--brand); }
+  .btn { font: inherit; font-weight: 600; padding: 11px 16px; border-radius: 9px; border: 1px solid transparent; cursor: pointer; }
+  .btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 45%, transparent); outline-offset: 2px; }
+  .primary { background: var(--brand); color: var(--brand-ink); width: 100%; }
+  .ghost { background: transparent; color: var(--brand); border-color: var(--line); width: 100%; margin-top: 10px; }
+  .primary:hover, .ghost:hover { filter: brightness(.95); }
+  #msg { min-height: 22px; margin: 12px 0 0; font-size: .9rem; }
+  #msg.error { color: var(--danger); } #msg.ok { color: #15803d; }
+  @media (prefers-color-scheme: dark) { #msg.ok { color: #86efac; } }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: .8rem; color: var(--muted); font-weight: 600; padding: 0 10px 8px; }
+  td { padding: 12px 10px; border-top: 1px solid var(--line); }
+  td.num, th.num { text-align: right; }
+  .badge { display: inline-block; padding: 3px 11px; border-radius: 99px; font-size: .8rem; font-weight: 600; }
+  .Budget { background: var(--budget-bg); color: var(--budget); }
+  .Standard { background: var(--standard-bg); color: var(--standard); }
+  .Premium { background: var(--premium-bg); color: var(--premium); }
+  .del { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 1.1rem; padding: 4px 8px; border-radius: 6px; }
+  .del:hover { color: var(--danger); }
+  .empty { color: var(--muted); text-align: center; padding: 18px 0 4px; }
+  .analytics { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 760px) { .analytics { grid-template-columns: 1fr; } }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 5px 11px; font-size: .9rem; }
+  .sub { color: var(--muted); font-size: .85rem; margin: 0 0 10px; }
+  details { margin-top: 18px; }
+  summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+  #console { background: var(--console-bg); color: var(--console-ink); border-radius: 10px; padding: 16px;
+             font: .88rem/1.6 ui-monospace, Consolas, monospace; white-space: pre-wrap; margin: 10px 0 0; overflow-x: auto; }
+  .tax { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: .92rem; }
+  .tax:last-child { border: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Inventory Dashboard</h1>
+    <p>Add products, see their category and track the value of your stock.</p>
+  </header>
+
+  <section class="stats" aria-label="Summary">
+    <div class="card stat"><div class="label">Total inventory value</div><div class="value" id="sTotal">$0</div></div>
+    <div class="card stat"><div class="label">Products</div><div class="value" id="sCount">0</div></div>
+    <div class="card stat"><div class="label">Average price</div><div class="value" id="sAvg">$0</div></div>
+    <div class="card stat"><div class="label">Affordable (under $200)</div><div class="value" id="sAff">0</div></div>
+  </section>
+
+  <div class="grid">
+    <section class="card" aria-labelledby="addTitle">
+      <h2 id="addTitle">Add a product</h2>
+      <form id="addForm" novalidate>
+        <label for="pName">Product name</label>
+        <input id="pName" type="text" placeholder="e.g. Monitor" autocomplete="off">
+        <label for="pPrice">Price ($)</label>
+        <input id="pPrice" type="text" inputmode="decimal" placeholder="e.g. 150" autocomplete="off">
+        <button class="btn primary" type="submit">Add product</button>
+      </form>
+      <button class="btn ghost" id="promptBtn" type="button">Add using prompt() pop-ups</button>
+      <p id="msg" role="status"></p>
+    </section>
+
+    <section class="card" aria-labelledby="invTitle">
+      <h2 id="invTitle">Inventory</h2>
+      <table>
+        <thead><tr><th>Item</th><th class="num">Price</th><th>Category</th><th><span class="sr" hidden>Remove</span></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <p class="empty" id="empty" hidden>No products yet. Add your first one.</p>
+    </section>
+  </div>
+
+  <div class="analytics">
+    <section class="card">
+      <h2>Affordable items</h2>
+      <p class="sub">Products priced under $200</p>
+      <div class="chips" id="affList"></div>
+      <h2 style="margin-top:22px">Report summary</h2>
+      <p class="sub">Name in capitals with price</p>
+      <div class="chips" id="reportList"></div>
+    </section>
+    <section class="card">
+      <h2>Price after 10% discount and 18% tax</h2>
+      <p class="sub">Calculated for each product</p>
+      <div id="taxList"></div>
+    </section>
+  </div>
+
+  <details>
+    <summary>Console output</summary>
+    <pre id="console"></pre>
+  </details>
+</div>
+
+<script>
+"use strict";
+
+/* ===== 1. DATA: pre-existing items (array of objects) ===== */
+const inventory = [
+  { name: "Laptop", price: 800 },
+  { name: "Mouse",  price: 25 }
+];
+
+/* ===== 2. CONTROL FLOW: validation (if...else) and badges (switch) ===== */
+function validateProduct(name, price) {
+  if (name === null || name.trim() === "") {
+    return "Please enter a product name.";
+  } else if (Number.isNaN(price)) {
+    return "Price must be a number, for example 150.";
+  } else if (price <= 0) {
+    return "Price must be greater than zero.";
+  } else {
+    return "";
+  }
+}
+
+const BUDGET_MAX = 50, STANDARD_MAX = 500;
+function getCategory(price) {
+  switch (true) {
+    case price < BUDGET_MAX:   return "Budget";
+    case price < STANDARD_MAX: return "Standard";
+    default:                   return "Premium";
+  }
+}
+
+/* ===== 3. LOOPS: search with break, retry prompts with continue/break ===== */
+function findIndexByName(list, name) {
+  let found = -1;
+  for (let i = 0; i < list.length; i++) {
+    if (list[i].name.toLowerCase() === name.toLowerCase()) { found = i; break; }
+  }
+  return found;
+}
+
+function toPrice(raw) {                       // explicit conversion
+  return Number(String(raw).replace(/[$,\s]/g, ""));
+}
+
+function promptForProduct(maxAttempts = 3) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const rawName = prompt("Enter a new product name:", "Monitor");
+    if (rawName === null) break;              // Cancel
+    const rawPrice = prompt("Enter the price (e.g. 150 or $150):", "$150");
+    if (rawPrice === null) break;             // Cancel
+    const name = rawName.trim(), price = toPrice(rawPrice);
+    const problem = validateProduct(name, price);
+    if (problem !== "") {
+      alert(`Attempt ${attempt} of ${maxAttempts}: ${problem}`);
+      continue;                               // bad input, try again
+    }
+    return { name, price };
+  }
+  return null;
+}
+
+/* ===== 4. FUNCTIONS & SCOPE ===== */
+function calculateTotal(list) {               // regular function, local scope
+  let total = 0;
+  for (const item of list) total += item.price;
+  return total;
+}
+const averagePrice = list => list.length ? calculateTotal(list) / list.length : 0;
+
+const makeAdjuster = (taxRate, discountRate) => {   // closure keeps rates private
+  const tax = taxRate, discount = discountRate;
+  return price => +(price * (1 - discount) * (1 + tax)).toFixed(2);
+};
+const adjust = makeAdjuster(0.18, 0.10);
+
+/* ===== Adding a product (shared by the form and prompt button) ===== */
+const msg = document.getElementById("msg");
+function say(text, type) { msg.textContent = text; msg.className = type; }
+
+function addProduct(name, price) {
+  const index = findIndexByName(inventory, name);
+  if (index !== -1) {
+    inventory[index].price = price;
+    say(`Updated "${name}" to $${price}.`, "ok");
+  } else {
+    inventory.push({ name, price });
+    say(`Added "${name}" at $${price}.`, "ok");
+  }
+  logConsole(name, price);
+  render();
+}
+
+/* ===== 5. ARRAY METHODS: forEach, filter, map ===== */
+const $ = id => document.getElementById(id);
+const money = n => "$" + (Number.isInteger(n) ? n : n.toFixed(2));
+
+function render() {
+  // forEach: build the inventory table rows
+  const rows = $("rows"); rows.textContent = "";
+  inventory.forEach((item, i) => {
+    const cat = getCategory(item.price);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td></td><td class="num">${money(item.price)}</td>
+      <td><span class="badge ${cat}">${cat}</span></td>
+      <td><button class="del" title="Remove" aria-label="Remove item" data-i="${i}">&times;</button></td>`;
+    tr.firstChild.textContent = item.name;
+    rows.appendChild(tr);
+  });
+  $("empty").hidden = inventory.length > 0;
+
+  // filter: affordable items; map: names and report strings
+  const affordable = inventory.filter(item => item.price < 200);
+  const affordableNames = affordable.map(item => item.name);
+  const report = inventory.map(item => `${item.name.toUpperCase()}: $${item.price}`);
+
+  $("sTotal").textContent = money(calculateTotal(inventory));
+  $("sCount").textContent = inventory.length;
+  $("sAvg").textContent = money(averagePrice(inventory));
+  $("sAff").textContent = affordable.length;
+
+  fillChips("affList", affordableNames, "None under $200");
+  fillChips("reportList", report, "Nothing to report");
+
+  const tax = $("taxList"); tax.textContent = "";
+  inventory.forEach(item => {
+    const row = document.createElement("div");
+    row.className = "tax";
+    const a = document.createElement("span"); a.textContent = item.name;
+    const b = document.createElement("strong"); b.textContent = money(adjust(item.price));
+    row.append(a, b); tax.appendChild(row);
+  });
+}
+
+function fillChips(id, list, emptyText) {
+  const box = $(id); box.textContent = "";
+  (list.length ? list : [emptyText]).forEach(text => {
+    const s = document.createElement("span"); s.className = "chip"; s.textContent = text; box.appendChild(s);
+  });
+}
+
+/* ===== Console simulation (also printed to the browser console) ===== */
+function logConsole(name, price) {
+  const lines = [];
+  lines.push("--- Initializing Inventory System ---");
+  if (name) lines.push(`[Prompt executed: User adds "${name}" at "$${price}"]`);
+  lines.push("", "--- Processing Inventory Roster (forEach) ---");
+  inventory.forEach(item => lines.push(`* Item: ${item.name} ($${item.price}) -> Category: ${getCategory(item.price)}`));
+  lines.push("", "--- Financial Analytics ---",
+    `Total Inventory Value: $${calculateTotal(inventory)}`,
+    `Filtered Affordable Items (Under $200): ${JSON.stringify(inventory.filter(i => i.price < 200).map(i => i.name))}`,
+    `Formatted Report List: ${JSON.stringify(inventory.map(i => `${i.name.toUpperCase()}: $${i.price}`))}`);
+  const text = lines.join("\n");
+  $("console").textContent = text;
+  console.log(text);
+}
+
+/* ===== Events ===== */
+$("addForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const name = $("pName").value.trim(), price = toPrice($("pPrice").value);
+  const problem = validateProduct(name, price);
+  if (problem !== "") { say(problem, "error"); return; }
+  addProduct(name, price);
+  e.target.reset(); $("pName").focus();
+});
+
+$("promptBtn").addEventListener("click", () => {
+  const entry = promptForProduct();
+  if (entry) addProduct(entry.name, entry.price);
+  else say("No product added.", "error");
+});
+
+$("rows").addEventListener("click", e => {
+  const btn = e.target.closest(".del");
+  if (!btn) return;
+  inventory.splice(Number(btn.dataset.i), 1);
+  say("Product removed.", "ok");
+  logConsole(null);
+  render();
+});
+
+logConsole(null);
+render();
+</script>
+</body>
+</html>
